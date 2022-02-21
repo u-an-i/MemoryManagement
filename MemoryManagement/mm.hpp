@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 #include <vector>
-#include <limits>
+#include <climits>
 
 class MemObject
 {
