@@ -142,15 +142,18 @@ class MemRegistry
 public:
     static void forget(const MemType& type)
     {
-        for (auto it = registry[type].begin(); it != registry[type].end(); ++it)
+        if (!(type == MemTypeProvider::defaultType) || overridden)
         {
-            if (*it != nullptr)
+            for (auto it = registry[type].begin(); it != registry[type].end(); ++it)
             {
-                delete* it;
+                if (*it != nullptr)
+                {
+                    delete* it;
+                }
             }
+            registry.erase(type);
+            MemTypeProvider::returnMemType(type);
         }
-        registry.erase(type);
-        MemTypeProvider::returnMemType(type);
     }
 
     static void switchType(const MemType& type, bool oneTimeOnly = true)
@@ -168,6 +171,7 @@ public:
 
     static void obliviate()
     {
+        overridden = true;
         for (auto it = registry.begin(); it != registry.end(); ++it)
         {
             forget(it->first);
@@ -195,8 +199,10 @@ private:
     static MemType typeToRegisterFor;
     static bool autoDefaultType;
     static bool typeChanged;
+    static bool overridden;
 };
 
+bool MemRegistry::overridden = false;
 bool MemRegistry::typeChanged = false;
 bool MemRegistry::autoDefaultType = true;
 MemType MemRegistry::typeToRegisterFor = MemTypeProvider::defaultType;
