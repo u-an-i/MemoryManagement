@@ -3,11 +3,21 @@ C++ "automatic" memory management
 
 enables you to be able to be worry-free about memory leaks
 
-1 header include only.
-
 ---
 
 Usage:
+
+1 header include only.
+
+**Derive your classes from MemObject.**
+
+`MemRegistry::obliviate();    // before program exit`
+
+Use other classes as `Derived<Other>* pointer = new Derived<Other>(); Other* pointerToOther = pointer->get();`; see Test Application.
+
+---
+
+Example:
 
 ```C++
 #include "MemoryManagement/mm.hpp"
@@ -28,7 +38,7 @@ You can still delete your objects before program exit when you like if you like,
 
 ---
 
-You can request a `MemType` by `MemTypeProvider::requestMemType()` and `MemRegistry::switchType(MemType& toSwitchTo, bool oneTimeOnly = true)` until possible `MemRegistry::revokeType()` to bin your new objects into a group which you can `MemRegistry::forget(MemType&)` on a whim when you don't need this batch anymore or leave that up to `MemRegistry::obliviate()`.
+You can request a `MemType` by `MemTypeProvider::requestMemType()` and `MemRegistry::switchType(MemType& toSwitchTo, bool oneTimeOnly = true)` until possible `MemRegistry::revokeType()` (when `oneTimeOnly` = false) to bin your new objects into a group which you can `MemRegistry::forget(MemType&)` on a whim when you don't need this batch anymore or leave that up to `MemRegistry::obliviate()`. `MemRegistry::forget(memTypeObject)` does `MemTypeProvider::returnMemType(memTypeObject)` which puts `memTypeObject` back in the pool of possible provided `MemType`, do not reuse a returned `MemType` object; you may `MemTypeProvider::reuseReturnedMemTypes = false;` to prevent returned `memTypeObject` be put back in the pool which eliminates some computation and space used, see Note further below about amount of available `MemType`.
 
 ---
 

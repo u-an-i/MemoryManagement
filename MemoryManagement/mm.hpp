@@ -31,14 +31,14 @@ public:
     ~MemType()
     {}
 
-    size_t operator()(const MemType& toHash) const
-    {
-        return toHash.type;
-    }
-
     bool operator==(const MemType& another) const
     {
         return type == another.type;
+    }
+
+    bool operator!=(const MemType& another) const
+    {
+        return type != another.type;
     }
 
     bool isInvalid()
@@ -72,62 +72,67 @@ public:
 
     static void returnMemType(const MemType& memType)
     {
-        // at 2^64 - 2 available MemType the question is whether the overhead of trying to reuse memType ever has a roi
-        if (memType.type == typePeak)
-        {
-            typePeak--;
-        }
-        else {
-            try
-            {
-                returnedMemTypes.push_back(memType);
-            }
-            catch (...)
-            {
-                // loss of reusability of memType taken, the memory will not leak however!
-            }
-        }
-        if (returnedMemTypes.size() > 0)
-        {
-            bool pass;
-            do
-            {
-                pass = false;
-                for (auto it = returnedMemTypes.begin(); it != returnedMemTypes.end(); ++it)
-                {
-                    if (it->type == typePeak)
-                    {
-                        returnedMemTypes.erase(it);
-                        pass = true;
-                        break;
-                    }
-                }
-            } while (pass);
-        }
+        MemTypeProvider::returnMemType(MemTypeProvider::exportMemType(memType));
     }
 
     const static MemType defaultType;
+    static bool reuseReturnedMemTypes;
 
 private:
     static unsigned long long typePeak;
-    static std::vector<MemType> returnedMemTypes;
+    static std::vector<unsigned long long> returnedTypes;
 
-    static unsigned long long exportMemType(MemType& memType)
+    static void returnMemType(const unsigned long long exportedType)
+    {
+        if (reuseReturnedMemTypes)
+        {
+            // at 2^64 - 2 available MemType the question is whether the overhead of trying to reuse memType ever has a roi
+            if (exportedType == typePeak)
+            {
+                typePeak--;
+            }
+            else {
+                try
+                {
+                    returnedTypes.push_back(exportedType);
+                }
+                catch (...)
+                {
+                    // loss of reusability of memType taken, the memory will not leak however!
+                }
+            }
+            if (returnedTypes.size() > 0)
+            {
+                bool pass;
+                do
+                {
+                    pass = false;
+                    for (auto it = returnedTypes.begin(); it != returnedTypes.end(); ++it)
+                    {
+                        if (*it == typePeak)
+                        {
+                            returnedTypes.erase(it);
+                            pass = true;
+                            break;
+                        }
+                    }
+                } while (pass);
+            }
+        }
+    }
+
+    static unsigned long long exportMemType(const MemType& memType)
     {
         return memType.type;
     }
-
-    static MemType importMemType(unsigned long long exportedMemType)
-    {
-        return MemType(exportedMemType);
-    }
 };
 
-std::vector<MemType> MemTypeProvider::returnedMemTypes;
+std::vector<unsigned long long> MemTypeProvider::returnedTypes;
 unsigned long long MemTypeProvider::typePeak = 0;
+bool MemTypeProvider::reuseReturnedMemTypes = true;
 const MemType MemTypeProvider::defaultType = MemType(0);
 
-typedef std::unordered_map<MemType, std::vector<MemObject*>, MemType> memMap;
+typedef std::unordered_map<unsigned long long, std::vector<MemObject*>> memMap;
 
 class MemRegistry
 {
@@ -142,36 +147,26 @@ class MemRegistry
 public:
     static void forget(const MemType& type)
     {
-        if (!(type == MemTypeProvider::defaultType) || overridden)
-        {
-            for (auto it = registry[type].begin(); it != registry[type].end(); ++it)
-            {
-                if (*it != nullptr)
-                {
-                    delete* it;
-                }
-            }
-            registry.erase(type);
-            MemTypeProvider::returnMemType(type);
-        }
+        MemRegistry::forget(MemTypeProvider::exportMemType(type));
     }
 
     static void switchType(const MemType& type, bool oneTimeOnly = true)
     {
-        typeToRegisterFor = type;
+        exportedTypeToRegisterFor = MemTypeProvider::exportMemType(type);
         autoDefaultType = oneTimeOnly;
         typeChanged = true;
     }
 
     static void revokeType()
     {
-        typeToRegisterFor = MemTypeProvider::defaultType;
+        exportedTypeToRegisterFor = MemTypeProvider::exportMemType(MemTypeProvider::defaultType);
         typeChanged = false;
     }
 
     static void obliviate()
     {
         overridden = true;
+        MemTypeProvider::reuseReturnedMemTypes = false;
         for (auto it = registry.begin(); it != registry.end(); ++it)
         {
             forget(it->first);
@@ -179,24 +174,41 @@ public:
     }
 
 private:
+    static void forget(const unsigned long long exportedType)
+    {
+        if (exportedType != exportedDefaultType || overridden)
+        {
+            for (auto it = registry[exportedType].begin(); it != registry[exportedType].end(); ++it)
+            {
+                if (*it != nullptr)
+                {
+                    delete* it;
+                }
+            }
+            registry.erase(exportedType);
+            MemTypeProvider::returnMemType(exportedType);
+        }
+    }
+
     static void registerMemObject(MemObject* memObject)
     {
-        registry[typeToRegisterFor].push_back(memObject);
-        memObject->index = registry[typeToRegisterFor].size();
-        memObject->type = MemTypeProvider::exportMemType(typeToRegisterFor);
+        registry[exportedTypeToRegisterFor].push_back(memObject);
+        memObject->index = registry[exportedTypeToRegisterFor].size();
+        memObject->type = exportedTypeToRegisterFor;
         if (typeChanged && autoDefaultType)
         {
-            typeToRegisterFor = MemTypeProvider::defaultType;
+            exportedTypeToRegisterFor = exportedDefaultType;
         }
     }
 
     static void nullify(MemObject* memObject)
     {
-        registry[MemTypeProvider::importMemType(memObject->type)][memObject->index - 1] = nullptr;
+        registry[memObject->type][memObject->index - 1] = nullptr;
     }
 
     static memMap registry;
-    static MemType typeToRegisterFor;
+    static unsigned long long exportedTypeToRegisterFor;
+    const static unsigned long long exportedDefaultType;
     static bool autoDefaultType;
     static bool typeChanged;
     static bool overridden;
@@ -205,8 +217,9 @@ private:
 bool MemRegistry::overridden = false;
 bool MemRegistry::typeChanged = false;
 bool MemRegistry::autoDefaultType = true;
-MemType MemRegistry::typeToRegisterFor = MemTypeProvider::defaultType;
-memMap MemRegistry::registry = memMap(8, MemTypeProvider::defaultType);
+const unsigned long long MemRegistry::exportedDefaultType = MemTypeProvider::exportMemType(MemTypeProvider::defaultType);
+unsigned long long MemRegistry::exportedTypeToRegisterFor = MemRegistry::exportedDefaultType;
+memMap MemRegistry::registry = memMap(8);
 
 MemObject::MemObject()
 {
@@ -217,5 +230,15 @@ MemObject::~MemObject()
 {
     MemRegistry::nullify(this);
 }
+
+template<class T>
+class Derived : T, MemObject
+{
+public:
+    T* get()
+    {
+        return (T*)this;
+    }
+};
 
 #endif

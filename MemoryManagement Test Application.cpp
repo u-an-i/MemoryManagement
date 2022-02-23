@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include "MemoryManagement/mm.hpp"
 
 class TestClass : MemObject
@@ -12,11 +13,25 @@ public:
 
     ~TestClass()
     {
-        std::cout << "Destructing TestClass. " << value << "\n";
+        std::cout << "Destructing TestClass " << value << ".\n";
     }
 
 private:
     int value;
+};
+
+class DerivedDerivedString : public Derived<std::string>            // this derivation is only to add output
+{
+public:
+    DerivedDerivedString()
+    {
+        std::cout << "Constructing DerivedDerivedString";
+    }
+
+    ~DerivedDerivedString()
+    {
+        std::cout << "Destructing DerivedDerivedString.\n";
+    }
 };
 
 int main()
@@ -39,6 +54,13 @@ int main()
             delete pointer;
             MemRegistry::switchType(MemTypeProvider::requestMemType());
         }
+    }
+
+    for (int i = 0; i < 5; i++)
+    {
+        DerivedDerivedString* pointer = new DerivedDerivedString();
+        pointer->get()->append("string " + std::to_string(i));
+        std::cout << " " << *pointer->get() << ".\n";
     }
 
     MemRegistry::obliviate();
