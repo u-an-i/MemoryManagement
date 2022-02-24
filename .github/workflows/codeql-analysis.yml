@@ -63,7 +63,7 @@ jobs:
     #    uses a compiled language
 
     - run: |
-       g++ -std=c++2b "MemoryManagement Test Application.cpp"
+       g++ -std=c++2b -std=gnu++2b "MemoryManagement Test Application.cpp"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
