@@ -5,7 +5,7 @@ enables you to be able to be worry-free about memory leaks
 
 ---
 
-Usage:
+**Usage**:
 
 1 header include only.
 
@@ -13,7 +13,12 @@ Usage:
 
 `MemRegistry::obliviate();    // before program exit`
 
-Use other classes as `Derived<Other>* pointer = new Derived<Other>(); Other* pointerToOther = pointer->get();`; see Test Application.
+Use other classes as
+```C++
+Derived<Other>* pointer = new Derived<Other>();
+Other* pointerToOther = pointer->get();
+```
+see Test Application.
 
 ---
 
@@ -46,16 +51,16 @@ Overhead:
 - spatial:  
 [sizeof(1 pointer), sizeof(size_t), sizeof(unsigned long long), compiler-dependant base class management bytes] per `new` during runtime + some fixed bytes + some bytes per many `new` (due to STL containers dynamic memory) until program exit  
 - computational:  
-few operations to register and few when you delete, some more when `forget`ting and `obliviate`ing
+few operations when `new` and few when you `delete`, some more when `forget`ting and `obliviate`ing
 
 ---
 
-Note:
+**Note**:  
 Requested `MemType`s might deplenish, check if `yourMemType.isInvalid()`, after 2^64 - 1 requests.
 
 ---
 
-Thread-Safety:
+**Thread-Safety**:  
 To use `MemObject`-derived classes from threads, explicitly pass a `MemType` unique to a thread to the constructor of `MemObject` for derived classes instantiated on that thread; see Test Application.
 
 ---
