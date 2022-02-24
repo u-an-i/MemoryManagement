@@ -55,4 +55,9 @@ Requested `MemType`s might deplenish, check if `yourMemType.isInvalid()`, after 
 
 ---
 
-Example application tested with Visual Studio 2022 with C++ 20 on Windows 11.
+Thread-Safety:
+To use `MemObject`-derived classes from threads, explicitly pass a `MemType` unique to a thread to the constructor of `MemObject` for derived classes instantiated on that thread; see Test Application.
+
+---
+
+Test Application tested with Visual Studio 2022 with C++ 20 on Windows 11.
