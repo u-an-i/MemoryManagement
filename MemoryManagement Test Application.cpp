@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <atomic>
 
 #include "MemoryManagement/mm.hpp"
 
@@ -92,11 +93,22 @@ public:
         }
     }
 
-    std::thread*& getThreadPointerReferenceForThreadCreation()
+    union returnValue
+    {
+    public:
+        std::thread** ref;
+        void* dummy;
+    };
+
+    union returnValue getThreadPointerReferenceForThreadCreation()
     {
         if (threadPointer == nullptr)
         {
-            return threadPointer;
+            return returnValue{ .ref = &threadPointer };
+        }
+        else
+        {
+            return returnValue{ .dummy = nullptr };
         }
     }
 
@@ -209,7 +221,7 @@ int main()
 
         for (int i = 0; i < 7; i++)
         {
-            (new Derived<WrappedThread>())->get()->getThreadPointerReferenceForThreadCreation() = new std::thread(threadCode, &WrappedThread::threadDone, i, MemTypeProvider::requestMemType());                // a `Derived<std::thread>` uses the default constructor of thread which is no thread, hence the `WrappedThread`
+            *((new Derived<WrappedThread>())->get()->getThreadPointerReferenceForThreadCreation().ref) = new std::thread(threadCode, &WrappedThread::threadDone, i, MemTypeProvider::requestMemType());            // a `Derived<std::thread>` uses the default constructor of thread which is no thread, hence the `WrappedThread`
         }
 
         std::thread thread([]() {                       // create a collector thread which checks the others for completion
