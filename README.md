@@ -39,7 +39,7 @@ int main()
 
 ---
 
-You can still delete your objects before program exit when you like if you like, nothing extra to consider.
+You can still delete your objects before program exit when you like if you like, nothing extra to consider; but for other classes objects use the `Derived<Other>*` pointer (not the `get()`ten one).
 
 ---
 

@@ -146,7 +146,7 @@ int WrappedThread::maxThreads = 0;
 std::atomic<bool> WrappedThread::passable(true);
 
 
-void threadCode(void (*doneCallback)(), int threadNumber, const MemType& memType)
+void threadCode(void (*doneCallback)(), int threadNumber, const MemType memType)
 {
     try
     {
@@ -209,19 +209,27 @@ int main()
 
         std::cout << "\n\n2. Other classes:\n\n";
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 10; i++)
         {
             DerivedDerivedString* pointer = new DerivedDerivedString(i);
             pointer->get()->append("string " + std::to_string(i));
             std::cout << " " << *pointer->get() << ".\n";
+            if (i == 5)
+            {
+                std::cout << "pre-destruct by Derived pointer: ";
+                delete pointer;
+            }
         }
 
 
         std::cout << "\n\n3. Threads:\n\n";
 
+        MemType lastMemType = MemTypeProvider::requestMemType();
+        MemTypeProvider::returnMemType(lastMemType);                        // a MemType cannot be declared without definition because such would construct one and it has no public constructor, this one not needed hence return it
         for (int i = 0; i < 7; i++)
         {
-            *((new Derived<WrappedThread>())->get()->getThreadPointerReferenceForThreadCreation().ref) = new std::thread(threadCode, &WrappedThread::threadDone, i, MemTypeProvider::requestMemType());            // a `Derived<std::thread>` uses the default constructor of thread which is no thread, hence the `WrappedThread`
+            lastMemType = MemTypeProvider::requestMemType();
+            *((new Derived<WrappedThread>())->get()->getThreadPointerReferenceForThreadCreation().ref) = new std::thread(threadCode, &WrappedThread::threadDone, i, lastMemType);          // a `Derived<std::thread>` uses the default constructor of thread which is no thread, hence the `WrappedThread`; I "know" .ref is assigned (because it's my first call)
         }
 
         std::thread thread([]() {                       // create a collector thread which checks the others for completion
@@ -238,12 +246,18 @@ int main()
                 }
                 WrappedThread::passable.store(true);
                 WrappedThread::passable.notify_one();
-            } while (true);
-            });
+            }
+            while (true);
+        });
         thread.join();                                  // instead of a collector thread, joining the individual `WrappedThread` after the loop (requiring storing them inside a container in the loop) works too: either the first thread took the longest already or it didn't and other threads still run after it completed and so on for the other threads joined after. Joining an already completed thread does nothing.
 
 
-        std::cout << "\n\n4. Before Program Exit, expected order matching construction per `MemType` minus early `delete`d sequentially (but unordered across `MemType`s):\n\n";
+        std::cout << "\n\n4. `forget` one batch (the last threads one):\n\n";
+
+        MemRegistry::forget(lastMemType);
+
+
+        std::cout << "\n\n5. Before Program Exit, expected order matching construction per `MemType` minus early `delete`d sequentially (but unordered across `MemType`s):\n\n";
 
         MemRegistry::obliviate();
     }

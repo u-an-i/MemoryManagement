@@ -125,7 +125,8 @@ private:
                             break;
                         }
                     }
-                } while (pass);
+                }
+                while (pass);
             }
         }
     }
@@ -207,7 +208,6 @@ private:
     static void registerMemObject(MemObject* memObject)
     {
         storeMemObjectPointer(memObject, exportedTypeToRegisterFor);
-        memObject->type = exportedTypeToRegisterFor;
         if (typeChanged && autoDefaultType)
         {
             exportedTypeToRegisterFor = exportedDefaultType;
@@ -216,15 +216,16 @@ private:
 
     static void storeMemObjectPointer(MemObject* memObject, unsigned long long type)
     {
-        registry[type].push_back(memObject);
+        memObject->type = type;
         memObject->index = registry[type].size();
+        registry[type].push_back(memObject);
     }
 
     static void nullify(MemObject* memObject)
     {
         if (early)
         {
-            registry[memObject->type][memObject->index - 1] = nullptr;
+            registry[memObject->type][memObject->index] = nullptr;
         }
     }
 
@@ -253,8 +254,7 @@ MemObject::MemObject()
 
 MemObject::MemObject(const MemType& type)
 {
-    this->type = type.type;
-    MemRegistry::storeMemObjectPointer(this, this->type);
+    MemRegistry::storeMemObjectPointer(this, type.type);
 }
 
 MemObject::~MemObject()
