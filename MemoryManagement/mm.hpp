@@ -30,29 +30,15 @@ class MemType
     friend MemObject;
     friend class MemTypeProvider;
 
-    MemType(unsigned long long newType)
-    {
-        type = newType;
-    }
+    MemType(unsigned long long newType);
 
 public:
-    ~MemType()
-    {}
+    ~MemType();
 
-    bool operator==(const MemType& another) const
-    {
-        return type == another.type;
-    }
+    bool operator==(const MemType& another) const;
+    bool operator!=(const MemType& another) const;
 
-    bool operator!=(const MemType& another) const
-    {
-        return type != another.type;
-    }
-
-    bool isInvalid()
-    {
-        return type == ULLONG_MAX;
-    }
+    bool isInvalid();
 
 private:
     unsigned long long type;
@@ -63,11 +49,8 @@ class MemTypeProvider
 {
     friend class MemRegistry;
 
-    MemTypeProvider()
-    {}
-
-    ~MemTypeProvider()
-    {}
+    MemTypeProvider();
+    ~MemTypeProvider();
 
 public:
     static MemType requestMemType()
@@ -137,11 +120,6 @@ private:
     }
 };
 
-std::vector<unsigned long long> MemTypeProvider::returnedTypes;
-unsigned long long MemTypeProvider::typePeak = 0;
-bool MemTypeProvider::reuseReturnedMemTypes = true;
-const MemType MemTypeProvider::defaultType = MemType(0);
-
 
 typedef std::unordered_map<unsigned long long, std::vector<MemObject*>> memMap;
 
@@ -149,11 +127,8 @@ class MemRegistry
 {
     friend MemObject;
 
-    MemRegistry()
-    {}
-
-    ~MemRegistry()
-    {}
+    MemRegistry();
+    ~MemRegistry();
 
 public:
     static void forget(const MemType& type)
@@ -237,30 +212,6 @@ private:
     static bool overridden;
     static bool early;
 };
-
-bool MemRegistry::early = true;
-bool MemRegistry::overridden = false;
-bool MemRegistry::typeChanged = false;
-bool MemRegistry::autoDefaultType = true;
-const unsigned long long MemRegistry::exportedDefaultType = MemTypeProvider::exportMemType(MemTypeProvider::defaultType);
-unsigned long long MemRegistry::exportedTypeToRegisterFor = MemRegistry::exportedDefaultType;
-memMap MemRegistry::registry = memMap(8);
-
-
-MemObject::MemObject()
-{
-    MemRegistry::registerMemObject(this);
-}
-
-MemObject::MemObject(const MemType& type)
-{
-    MemRegistry::storeMemObjectPointer(this, type.type);
-}
-
-MemObject::~MemObject()
-{
-    MemRegistry::nullify(this);
-}
 
 
 template<class T>
